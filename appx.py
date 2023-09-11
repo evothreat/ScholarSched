@@ -437,7 +437,7 @@ class Backend:
                             'POINTS': row2[3]
                         })
 
-                    templ = Template('template.docx')
+                    templ = Template('cert_template.docx')
 
                     templ.replace_str('NAME',   m.fullname())
                     templ.replace_str('ID',     m.id)
