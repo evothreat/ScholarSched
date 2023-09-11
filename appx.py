@@ -3,9 +3,15 @@ from tkinter.filedialog import askopenfilename
 from tkinter.scrolledtext import ScrolledText
 import csv
 import os
-from os.path import exists, basename
+from os.path import exists, basename, join as pathjoin, dirname
 from shutil import rmtree
 from docx import Document
+
+
+WORKSPACE = 'wsp'
+BSO_DIR = pathjoin(WORKSPACE, 'BSO')
+EDITED_DIR = pathjoin(WORKSPACE, 'Edited')
+CERTS_DIR = pathjoin(WORKSPACE, 'Zertifikate')
 
 def join_dicts(*ds):
     d = {}
@@ -15,16 +21,14 @@ def join_dicts(*ds):
 
 class Backend:
     def __init__(self):
-        if not exists('../BSO'):
-            os.mkdir('../BSO')
+        if not exists(WORKSPACE):
+            os.mkdir(WORKSPACE)
 
-        if not exists('../Edited'):
-            os.mkdir('../Edited')
+        if not exists(EDITED_DIR):
+            os.mkdir(EDITED_DIR)
 
-        if not exists('../Zertifikate'):
-            os.mkdir('../Zertifikate')
-
-        os.chdir('../BSO')
+        if not exists(CERTS_DIR):
+            os.mkdir(CERTS_DIR)
 
         self.root = Tk()
         self.window = Window(self.root, self)
@@ -51,7 +55,8 @@ class Backend:
                     continue
 
                 if not exists(m.fpath):
-                    os.mkdir(m.id)
+                    os.makedirs(dirname(m.fpath), exist_ok=True)
+
                     with open(m.fpath, 'w') as wf:
                         w = csv.writer(wf, delimiter=';')
                         w.writerow([m.lname, m.fname, m.teacher])
@@ -123,7 +128,7 @@ class Backend:
             return
 
         mbrs = []
-        for id in os.listdir():
+        for id in os.listdir(BSO_DIR):
             m = Member(id=id)
             with open(m.fpath) as rf:
                 row = next(csv.reader(rf, delimiter=';'))
@@ -132,7 +137,7 @@ class Backend:
                 m.teacher = row[2]
                 mbrs.append(m)
 
-        wfile = '../Edited/' + basename(rfile)
+        wfile = pathjoin(EDITED_DIR, basename(rfile))
 
         c = Counter()
         with open(rfile) as rf, open(wfile, 'w', newline='') as wf:
@@ -334,7 +339,7 @@ class Backend:
         if not rfile:
             return
 
-        wfile = '../Edited/' + basename(rfile)
+        wfile = pathjoin(EDITED_DIR, basename(rfile))
 
         c = Counter()
         with open(rfile) as rf, open(wfile, 'w', newline='') as wf:
@@ -439,7 +444,7 @@ class Backend:
                     templ.replace_str('TOTAL',  m.total_pts())      # change?
                     templ.update_table(evts)
 
-                    templ.save('../Zertifikate/' + m.id + '.docx')
+                    templ.save(pathjoin(CERTS_DIR, m.id + '.docx'))
 
                     c.inc_succes()
                     self.window.write('[+] Zertifikat für', m.lname, m.fname,
@@ -454,7 +459,7 @@ class Window:
 
         self.backend = backend
 
-        self.master.title('AppX')
+        self.master.title('ScholarSched')
         self.master.geometry('820x630')
 
         self.bar = Menu()
@@ -479,19 +484,19 @@ class Window:
                                command=self.backend.delete_filepaths)
 
         self.help.add_command(label='Schülerverzeichnisse anlegen',
-                              command=lambda: os.system('start ../appx/doku/p01.pdf'))
+                              command=lambda: os.system('start doku/p01.pdf'))
         self.help.add_command(label='Schülernummer zuordnen',
-                              command=lambda: os.system('start ../appx/doku/p02.pdf'))
+                              command=lambda: os.system('start doku/p02.pdf'))
         self.help.add_command(label='Veranstaltungen eintragen',
-                              command=lambda: os.system('start ../appx/doku/p03.pdf'))
+                              command=lambda: os.system('start doku/p03.pdf'))
         self.help.add_command(label='BSO-Punkte berechnen',
-                              command=lambda: os.system('start ../appx/doku/p04.pdf'))
+                              command=lambda: os.system('start doku/p04.pdf'))
         self.help.add_command(label='Zertifikate erstellen',
-                              command=lambda: os.system('start ../appx/doku/p05.pdf'))
+                              command=lambda: os.system('start doku/p05.pdf'))
         self.help.add_command(label='Tutor aktualisieren',
-                              command=lambda: os.system('start ../appx/doku/p06.pdf'))
+                              command=lambda: os.system('start doku/p06.pdf'))
         self.help.add_command(label='Schülerverzeichnisse entfernen',
-                              command=lambda: os.system('start ../appx/doku/p07.pdf'))
+                              command=lambda: os.system('start doku/p07.pdf'))
 
         self.bar.add_cascade(label='Listenoperationen', menu=self.lists)
         self.bar.add_cascade(label='Hilfe', menu=self.help)
@@ -519,7 +524,7 @@ class Window:
         self.search.grid(row=2, column=0, columnspan=1, sticky=sticky)
         self.add.grid(row=2, column=1, columnspan=4, sticky=sticky)
 
-        self.logo = PhotoImage(file='../appx/logo/cvo-gyo-logo.png')
+        self.logo = PhotoImage(file='logo/cvo-gyo-logo.png')
 
         self.lab = Label(self.master, image=self.logo)
         self.lab.grid(row=0, column=5, rowspan=3, sticky=sticky)
@@ -559,7 +564,7 @@ class Member:
             'Gesamt':     0,
             'Zertifikat': 'nein'
         }
-        self.fpath = id + '/' + id + '.csv'
+        self.fpath = pathjoin(BSO_DIR, id, id + '.csv')
 
     def fullname(self):
         return self.fname + ' ' + self.lname
